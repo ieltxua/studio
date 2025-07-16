@@ -1,0 +1,95 @@
+version: '3.8'
+
+services:
+  github-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: studio-github-mcp
+    ports:
+      - "8002:8002"
+    environment:
+      # GitHub Configuration
+      GITHUB_TOKEN: ${GITHUB_TOKEN}
+      GITHUB_WEBHOOK_SECRET: ${GITHUB_WEBHOOK_SECRET}
+      
+      # Studio Integration
+      STUDIO_API_URL: ${STUDIO_API_URL:-http://studio-backend:3000}
+      STUDIO_API_KEY: ${STUDIO_API_KEY}
+      
+      # Database
+      DATABASE_URL: ${DATABASE_URL:-postgresql://studio:studio@postgres:5432/studio}
+      
+      # Redis
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      
+      # Server Config
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      SERVER_PORT: 8002
+      
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - studio-network
+    volumes:
+      - ./logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: studio-postgres
+    environment:
+      POSTGRES_DB: studio
+      POSTGRES_USER: studio
+      POSTGRES_PASSWORD: studio
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - studio-network
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: studio-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - studio-network
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+
+  # Optional: ngrok for webhook testing in development
+  ngrok:
+    image: ngrok/ngrok:alpine
+    container_name: studio-ngrok
+    command: http github-mcp:8002
+    environment:
+      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN}
+    ports:
+      - "4040:4040"  # ngrok web interface
+    networks:
+      - studio-network
+    profiles:
+      - dev
+    depends_on:
+      - github-mcp
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  studio-network:
+    external: true
+    name: studio-network

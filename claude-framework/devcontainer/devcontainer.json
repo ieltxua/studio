@@ -1,0 +1,128 @@
+{
+  "name": "CLAUDE Development Framework",
+  "dockerComposeFile": "../docker-compose.yml",
+  "service": "claude-devcontainer", 
+  "workspaceFolder": "/workspace",
+  "shutdownAction": "stopCompose",
+
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "20"
+    },
+    "ghcr.io/devcontainers/features/python:1": {
+      "version": "3.11"
+    },
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/devcontainers/features/git:1": {}
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.vscode-typescript-next",
+        "ms-python.python",
+        "ms-python.pylint",
+        "bradlc.vscode-tailwindcss",
+        "esbenp.prettier-vscode",
+        "ms-vscode.test-adapter-converter",
+        "GitHub.copilot",
+        "ms-vscode.vscode-json"
+      ],
+      "settings": {
+        "claude.mcp.servers": {
+          "claude-context": {
+            "command": "/usr/local/bin/claude-context-server",
+            "transport": "stdio",
+            "scope": "project"
+          },
+          "claude-orchestrator": {
+            "command": "/usr/local/bin/claude-orchestrator-server", 
+            "transport": "stdio",
+            "scope": "project"
+          },
+          "claude-quality": {
+            "command": "/usr/local/bin/claude-quality-server",
+            "transport": "stdio", 
+            "scope": "project"
+          },
+          "claude-github": {
+            "command": "/usr/local/bin/claude-github-server",
+            "transport": "stdio",
+            "scope": "project"
+          },
+          "claude-knowledge": {
+            "command": "/usr/local/bin/claude-knowledge-server",
+            "transport": "stdio",
+            "scope": "user"
+          }
+        },
+        "claude.hooks": "/workspace/hooks/claude-hooks.json",
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "python.formatting.provider": "black",
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+          "source.organizeImports": true
+        }
+      }
+    }
+  },
+
+  "forwardPorts": [
+    3000,
+    8000,
+    5432,
+    6379,
+    8080
+  ],
+
+  "portsAttributes": {
+    "3000": {
+      "label": "Frontend Development Server",
+      "onAutoForward": "notify"
+    },
+    "8000": {
+      "label": "Backend API Server", 
+      "onAutoForward": "notify"
+    },
+    "5432": {
+      "label": "PostgreSQL Database",
+      "onAutoForward": "silent"
+    },
+    "6379": {
+      "label": "Redis Cache",
+      "onAutoForward": "silent"
+    },
+    "8080": {
+      "label": "MCP Server Dashboard",
+      "onAutoForward": "notify"
+    }
+  },
+
+  "postCreateCommand": [
+    "bash",
+    "-c", 
+    "chmod +x /workspace/scripts/*.sh && chmod +x /workspace/hooks/*.sh && /workspace/scripts/setup-claude-framework.sh"
+  ],
+
+  "postStartCommand": "/workspace/hooks/validate-context.sh",
+
+  "mounts": [
+    "source=claude-context-data,target=/workspace/.claude,type=volume",
+    "source=claude-mcp-data,target=/usr/local/mcp-data,type=volume"
+  ],
+
+  "remoteEnv": {
+    "CLAUDE_FRAMEWORK_MODE": "development",
+    "CLAUDE_PROJECT_ROOT": "/workspace",
+    "CLAUDE_CONTEXT_PATH": "/workspace/.claude",
+    "CLAUDE_MCP_DATA_PATH": "/usr/local/mcp-data",
+    "PYTHONPATH": "/workspace/mcp-servers",
+    "NODE_PATH": "/workspace/mcp-servers"
+  },
+
+  "containerEnv": {
+    "DOCKER_BUILDKIT": "1",
+    "COMPOSE_DOCKER_CLI_BUILD": "1"
+  }
+}

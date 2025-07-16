@@ -1,0 +1,7 @@
+# Context MCP Server Requirements
+-r ../base/requirements.txt
+
+# Additional dependencies for context management
+chromadb==0.4.18
+sentence-transformers==2.2.2
+tiktoken==0.5.2

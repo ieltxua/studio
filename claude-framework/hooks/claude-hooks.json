@@ -1,0 +1,125 @@
+{
+  "name": "CLAUDE Framework Hooks",
+  "version": "1.0.0",
+  "description": "Automated workflow hooks for the CLAUDE meta-development framework",
+  
+  "hooks": [
+    {
+      "name": "context_validator",
+      "type": "PreToolUse", 
+      "description": "Ensure project context is loaded before any development task",
+      "tool_regex": "(Edit|Write|MultiEdit|Bash)",
+      "command": "./hooks/validate-context.sh",
+      "blocking": true,
+      "approval_required": false,
+      "timeout": 30
+    },
+    {
+      "name": "quality_gate_pre",
+      "type": "PreToolUse",
+      "description": "Run quality checks before code modifications", 
+      "tool_regex": "(Edit|Write|MultiEdit)",
+      "command": "./hooks/pre-quality-check.sh",
+      "blocking": true,
+      "approval_required": true,
+      "timeout": 60
+    },
+    {
+      "name": "task_tracker_start",
+      "type": "PreToolUse",
+      "description": "Track task start in orchestrator",
+      "tool_regex": ".*",
+      "command": "./hooks/track-task-start.sh",
+      "blocking": false,
+      "approval_required": false,
+      "timeout": 10
+    },
+    {
+      "name": "context_updater",
+      "type": "PostToolUse",
+      "description": "Update project context after successful operations",
+      "tool_regex": "(Edit|Write|MultiEdit|Bash)",
+      "command": "./hooks/update-context.sh", 
+      "blocking": false,
+      "approval_required": false,
+      "timeout": 30
+    },
+    {
+      "name": "quality_validator_post",
+      "type": "PostToolUse",
+      "description": "Run automated tests after code changes",
+      "tool_regex": "(Edit|Write|MultiEdit)",
+      "command": "./hooks/post-quality-check.sh",
+      "blocking": true,
+      "approval_required": false,
+      "timeout": 120,
+      "failure_action": "suggest_rollback"
+    },
+    {
+      "name": "progress_reporter",
+      "type": "PostToolUse", 
+      "description": "Update progress tracking and dashboards",
+      "tool_regex": ".*",
+      "command": "./hooks/update-progress.sh",
+      "blocking": false,
+      "approval_required": false,
+      "timeout": 20
+    },
+    {
+      "name": "slack_notification",
+      "type": "Notification",
+      "description": "Send progress updates to Slack",
+      "notification_types": ["task_complete", "milestone_reached", "error_occurred"],
+      "command": "./hooks/slack-notify.sh",
+      "blocking": false,
+      "approval_required": false,
+      "timeout": 15
+    },
+    {
+      "name": "github_automation",
+      "type": "Notification", 
+      "description": "Update GitHub issues and PRs",
+      "notification_types": ["feature_complete", "bug_fixed", "pr_ready"],
+      "command": "./hooks/github-update.sh",
+      "blocking": false,
+      "approval_required": false,
+      "timeout": 30
+    },
+    {
+      "name": "session_archiver",
+      "type": "Stop",
+      "description": "Archive session context and learnings",
+      "command": "./hooks/archive-session.sh",
+      "blocking": false,
+      "approval_required": false,
+      "timeout": 45
+    },
+    {
+      "name": "knowledge_extractor",
+      "type": "Stop",
+      "description": "Extract patterns and learnings from session",
+      "command": "./hooks/extract-knowledge.sh",
+      "blocking": false,
+      "approval_required": false,
+      "timeout": 60
+    },
+    {
+      "name": "subagent_aggregator",
+      "type": "SubagentStop",
+      "description": "Aggregate subagent results for main context",
+      "command": "./hooks/aggregate-subagent-results.sh",
+      "blocking": true,
+      "approval_required": false,
+      "timeout": 30
+    }
+  ],
+  
+  "settings": {
+    "max_concurrent_hooks": 5,
+    "default_timeout": 30,
+    "retry_failed_hooks": true,
+    "max_retries": 2,
+    "log_level": "INFO",
+    "enable_metrics": true
+  }
+}

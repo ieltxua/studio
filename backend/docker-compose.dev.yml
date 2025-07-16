@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: studio-postgres
+    environment:
+      POSTGRES_DB: studio_development
+      POSTGRES_USER: studio
+      POSTGRES_PASSWORD: studio
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./prisma/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - studio-dev
+
+  postgres-test:
+    image: postgres:15-alpine
+    container_name: studio-postgres-test
+    environment:
+      POSTGRES_DB: studio_test
+      POSTGRES_USER: studio
+      POSTGRES_PASSWORD: studio
+    ports:
+      - "5433:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    networks:
+      - studio-dev
+
+  redis:
+    image: redis:7-alpine
+    container_name: studio-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - studio-dev
+
+  adminer:
+    image: adminer:latest
+    container_name: studio-adminer
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+    networks:
+      - studio-dev
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  studio-dev:
+    driver: bridge

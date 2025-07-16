@@ -1,0 +1,6 @@
+# Orchestrator MCP Server Requirements
+-r ../base/requirements.txt
+
+# Additional dependencies for task orchestration
+celery==5.3.4
+kombu==5.3.4

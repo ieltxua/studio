@@ -1,0 +1,211 @@
+version: '3.8'
+
+services:
+  claude-devcontainer:
+    build:
+      context: ./devcontainer
+      dockerfile: Dockerfile
+    volumes:
+      - .:/workspace:cached
+      - claude-context-data:/workspace/.claude
+      - claude-mcp-data:/usr/local/mcp-data
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - CLAUDE_FRAMEWORK_MODE=development
+      - CLAUDE_PROJECT_ROOT=/workspace
+      - CLAUDE_CONTEXT_PATH=/workspace/.claude
+      - CLAUDE_MCP_DATA_PATH=/usr/local/mcp-data
+      - DATABASE_URL=postgresql://claude:claude@postgres:5432/claude_framework
+      - REDIS_URL=redis://redis:6379
+      - CHROMADB_URL=http://chromadb:8000
+    networks:
+      - claude-network
+    depends_on:
+      - postgres
+      - redis
+      - chromadb
+    ports:
+      - "3000:3000"
+      - "8000:8000"
+    command: sleep infinity
+
+  claude-context-server:
+    build:
+      context: ./mcp-servers/context
+      dockerfile: Dockerfile
+    volumes:
+      - claude-context-data:/data
+      - claude-mcp-data:/mcp-data
+    environment:
+      - DATABASE_URL=postgresql://claude:claude@postgres:5432/claude_framework
+      - CHROMADB_URL=http://chromadb:8000
+      - REDIS_URL=redis://redis:6379
+      - MCP_SERVER_NAME=claude-context
+      - MCP_SERVER_VERSION=1.0.0
+    networks:
+      - claude-network
+    depends_on:
+      - postgres
+      - redis
+      - chromadb
+    restart: unless-stopped
+
+  claude-orchestrator-server:
+    build:
+      context: ./mcp-servers/orchestrator
+      dockerfile: Dockerfile
+    volumes:
+      - claude-mcp-data:/mcp-data
+    environment:
+      - DATABASE_URL=postgresql://claude:claude@postgres:5432/claude_framework
+      - REDIS_URL=redis://redis:6379
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - MCP_SERVER_NAME=claude-orchestrator
+      - MCP_SERVER_VERSION=1.0.0
+    networks:
+      - claude-network
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+
+  claude-quality-server:
+    build:
+      context: ./mcp-servers/quality
+      dockerfile: Dockerfile
+    volumes:
+      - claude-mcp-data:/mcp-data
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - DATABASE_URL=postgresql://claude:claude@postgres:5432/claude_framework
+      - REDIS_URL=redis://redis:6379
+      - SONAR_TOKEN=${SONAR_TOKEN}
+      - SNYK_TOKEN=${SNYK_TOKEN}
+      - MCP_SERVER_NAME=claude-quality
+      - MCP_SERVER_VERSION=1.0.0
+    networks:
+      - claude-network
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+
+  claude-github-server:
+    build:
+      context: ./mcp-servers/github
+      dockerfile: Dockerfile
+    volumes:
+      - claude-mcp-data:/mcp-data
+    environment:
+      - DATABASE_URL=postgresql://claude:claude@postgres:5432/claude_framework
+      - REDIS_URL=redis://redis:6379
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - GITHUB_WEBHOOK_SECRET=${GITHUB_WEBHOOK_SECRET}
+      - SLACK_TOKEN=${SLACK_TOKEN}
+      - MCP_SERVER_NAME=claude-github
+      - MCP_SERVER_VERSION=1.0.0
+    networks:
+      - claude-network
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+
+  claude-knowledge-server:
+    build:
+      context: ./mcp-servers/knowledge
+      dockerfile: Dockerfile
+    volumes:
+      - claude-mcp-data:/mcp-data
+      - claude-knowledge-data:/knowledge-data
+    environment:
+      - DATABASE_URL=postgresql://claude:claude@postgres:5432/claude_framework
+      - CHROMADB_URL=http://chromadb:8000
+      - REDIS_URL=redis://redis:6379
+      - MCP_SERVER_NAME=claude-knowledge
+      - MCP_SERVER_VERSION=1.0.0
+    networks:
+      - claude-network
+    depends_on:
+      - postgres
+      - redis
+      - chromadb
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=claude_framework
+      - POSTGRES_USER=claude
+      - POSTGRES_PASSWORD=claude
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    networks:
+      - claude-network
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    networks:
+      - claude-network
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+  chromadb:
+    image: chromadb/chroma:latest
+    environment:
+      - CHROMA_SERVER_HOST=0.0.0.0
+      - CHROMA_SERVER_HTTP_PORT=8000
+    volumes:
+      - chroma-data:/chroma/chroma
+    networks:
+      - claude-network
+    ports:
+      - "8001:8000"
+    restart: unless-stopped
+
+  mcp-dashboard:
+    build:
+      context: ./mcp-servers/dashboard
+      dockerfile: Dockerfile
+    environment:
+      - DATABASE_URL=postgresql://claude:claude@postgres:5432/claude_framework
+      - REDIS_URL=redis://redis:6379
+    networks:
+      - claude-network
+    depends_on:
+      - postgres
+      - redis
+    ports:
+      - "8090:8090"
+    restart: unless-stopped
+
+volumes:
+  claude-context-data:
+    driver: local
+  claude-mcp-data:
+    driver: local
+  claude-knowledge-data:
+    driver: local
+  postgres-data:
+    driver: local
+  redis-data:
+    driver: local
+  chroma-data:
+    driver: local
+
+networks:
+  claude-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

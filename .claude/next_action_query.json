@@ -1,0 +1,85 @@
+{
+  "query_timestamp": "2025-07-16T21:10:00Z",
+  "query_type": "suggest_next_action",
+  "parameters": {
+    "context_scope": "immediate",
+    "consider_blockers": true,
+    "include_rationale": true
+  },
+  "simulated_mcp_response": {
+    "success": true,
+    "suggestion": {
+      "action_type": "start_next_task",
+      "title": "Start Database Schema Design and Setup",
+      "description": "Design and implement PostgreSQL database schema for users, projects, agents, tasks, and audit logging",
+      "priority": "critical",
+      "estimated_effort": "90 minutes",
+      "task_id": "task-002",
+      "task_type": "database",
+      "rationale": "This task is next in the dependency chain and all prerequisites are completed. The backend project structure (task-001) is complete, making database schema the logical next step. Database design is critical for enabling all subsequent API development work.",
+      "next_steps": [
+        "Review task requirements: Database Schema Design and Setup",
+        "Design multi-tenant database structure with proper isolation",
+        "Create Prisma schema with all required models",
+        "Set up database migrations and seed data",
+        "Test database connectivity and basic operations"
+      ],
+      "alternatives": [
+        "Work on authentication system in parallel if database design needs review",
+        "Start with simpler in-memory models if database setup is complex",
+        "Focus on API endpoint structure while database is being designed"
+      ],
+      "risks": [
+        "Database schema changes later in development are costly",
+        "Multi-tenancy design complexity may slow initial progress",
+        "Missing requirements could require schema redesign"
+      ],
+      "acceptance_criteria": [
+        "User management tables with roles",
+        "Project and organization structure",
+        "Agent and task tracking tables", 
+        "Audit logging for all operations",
+        "Database migrations system",
+        "Seed data for development"
+      ]
+    },
+    "rationale": "Task task-002 is next in the dependency chain and all prerequisites are completed. It's critical for enabling subsequent work.",
+    "alternative_options": [
+      "Work on parallel track if this task is blocked",
+      "Break task down further if complexity is high"
+    ],
+    "risk_assessment": [
+      "Task dependencies may have changed",
+      "Requirements may need clarification"
+    ],
+    "timestamp": "2025-07-16T21:10:00Z",
+    "context_scope": "immediate",
+    "framework_confidence": "high",
+    "learning_insights": {
+      "pattern_detected": "Backend foundation → Database schema → Authentication → API endpoints",
+      "decision_logic": "Dependencies-first approach ensures solid foundation",
+      "estimated_accuracy": "85%",
+      "improvement_areas": [
+        "Consider parallel work streams for efficiency",
+        "Factor in team size and skill specialization",
+        "Include stakeholder priority inputs"
+      ]
+    }
+  },
+  "meta_analysis": {
+    "framework_intelligence_level": "basic_but_functional",
+    "suggestion_quality": "logical_and_well_reasoned",
+    "areas_for_enhancement": [
+      "Integration with external project management tools",
+      "Real-time blocker detection",
+      "Resource availability consideration",
+      "Stakeholder priority weighting"
+    ],
+    "self_improvement_recommendations": [
+      "Track suggestion accuracy over time",
+      "Learn from deviations from suggested path",
+      "Incorporate user feedback on suggestions",
+      "Build domain-specific knowledge base"
+    ]
+  }
+}
