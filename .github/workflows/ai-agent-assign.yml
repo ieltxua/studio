@@ -1,0 +1,66 @@
+name: AI Agent Auto-Assignment
+
+on:
+  issues:
+    types: [opened, labeled]
+
+jobs:
+  assign-agent:
+    runs-on: ubuntu-latest
+    if: contains(github.event.issue.labels.*.name, 'ai-ready')
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Analyze Issue and Assign Agent
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const issue = context.payload.issue;
+          
+          // Analyze issue content to determine appropriate agent type
+          const issueText = `${issue.title} ${issue.body}`.toLowerCase();
+          
+          let agentType = 'general';
+          let priority = 'medium';
+          
+          // Determine agent type based on keywords
+          if (issueText.includes('bug') || issueText.includes('error') || issueText.includes('fix')) {
+            agentType = 'bug-fix';
+            priority = 'high';
+          } else if (issueText.includes('feature') || issueText.includes('implement') || issueText.includes('add')) {
+            agentType = 'feature-development';
+          } else if (issueText.includes('test') || issueText.includes('testing')) {
+            agentType = 'testing';
+          } else if (issueText.includes('docs') || issueText.includes('documentation')) {
+            agentType = 'documentation';
+            priority = 'low';
+          }
+          
+          // Add labels
+          await github.rest.issues.addLabels({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: issue.number,
+            labels: [`agent:${agentType}`, `priority:${priority}`, 'ai-assigned']
+          });
+          
+          // Add comment
+          const comment = `🤖 **AI Agent Assignment**
+          
+          This issue has been automatically assigned to an AI agent.
+          
+          - **Agent Type:** ${agentType}
+          - **Priority:** ${priority}
+          - **Status:** Queued for processing
+          
+          The AI agent will begin working on this issue shortly. Updates will be posted as comments.
+          
+          *Assigned by Studio AI Automation System*`;
+          
+          await github.rest.issues.createComment({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: issue.number,
+            body: comment
+          });

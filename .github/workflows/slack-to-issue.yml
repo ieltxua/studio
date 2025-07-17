@@ -1,0 +1,55 @@
+name: Slack to GitHub Issue
+
+on:
+  workflow_dispatch:
+    inputs:
+      slack_message:
+        description: 'Slack message content'
+        required: true
+      slack_user:
+        description: 'Slack user who sent the message'
+        required: true
+      slack_channel:
+        description: 'Slack channel where message was sent'
+        required: true
+
+jobs:
+  create-issue:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Create GitHub Issue
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const slackMessage = context.payload.inputs.slack_message;
+          const slackUser = context.payload.inputs.slack_user;
+          const slackChannel = context.payload.inputs.slack_channel;
+          
+          // Parse the message to extract title and body
+          const lines = slackMessage.split('\n');
+          const title = lines[0].substring(0, 100) || 'New issue from Slack';
+          const body = `## Original Slack Message
+          
+          **From:** ${slackUser}
+          **Channel:** ${slackChannel}
+          **Time:** ${new Date().toISOString()}
+          
+          ### Message Content:
+          ${slackMessage}
+          
+          ---
+          *This issue was automatically created from a Slack message by Studio AI.*`;
+          
+          // Create the issue
+          const issue = await github.rest.issues.create({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            title: title,
+            body: body,
+            labels: ['from-slack', 'needs-triage']
+          });
+          
+          console.log(`Created issue #${issue.data.number}: ${issue.data.html_url}`);
