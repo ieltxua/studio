@@ -1,5 +1,7 @@
 import express from 'express';
 import cors from 'cors';
+import webhookRoutes from './routes/webhooks';
+import { taskQueue } from './services/taskQueue';
 
 const app = express();
 const PORT = 9917;
@@ -7,6 +9,9 @@ const PORT = 9917;
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Webhook routes
+app.use('/webhooks', webhookRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -48,22 +53,49 @@ app.get('/api/v1/agents', (req, res) => {
 });
 
 app.get('/api/v1/tasks', (req, res) => {
+  const tasks = taskQueue.getAllTasks();
   res.json({
     success: true,
     data: {
-      tasks: []
+      tasks: tasks.map(task => ({
+        id: task.id,
+        type: task.type,
+        priority: task.priority,
+        status: task.status,
+        projectId: task.projectId,
+        githubIssueId: task.githubIssueId,
+        createdAt: task.createdAt,
+        startedAt: task.startedAt,
+        completedAt: task.completedAt
+      }))
     }
   });
 });
 
+app.get('/api/v1/tasks/stats', (req, res) => {
+  res.json({
+    success: true,
+    data: taskQueue.getStats()
+  });
+});
+
 app.get('/api/v1/organizations/current/stats', (req, res) => {
+  const taskStats = taskQueue.getStats();
+  const completionRate = taskStats.total > 0 
+    ? Math.round((taskStats.completed / taskStats.total) * 100) 
+    : 0;
+    
   res.json({
     success: true,
     data: {
       stats: {
         projects: { total: 1, active: 1 },
-        agents: { total: 0, active: 0, idle: 0 },
-        tasks: { total: 0, completedThisMonth: 0, completionRate: 0 },
+        agents: { total: 3, active: taskStats.processing, idle: 3 - taskStats.processing },
+        tasks: { 
+          total: taskStats.total, 
+          completedThisMonth: taskStats.completed,
+          completionRate 
+        },
         members: { total: 1 },
         usage: { totalTokens: 0, monthlyTokens: 0 }
       }
