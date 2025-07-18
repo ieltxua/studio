@@ -1,7 +1,10 @@
 import express from 'express';
 import cors from 'cors';
 import webhookRoutes from './routes/webhooks';
+import repositoryRoutes from './routes/repositories';
+import agentRoutes from './routes/agents';
 import { taskQueue } from './services/taskQueue';
+import { db } from './services/database';
 
 const app = express();
 const PORT = 9917;
@@ -10,8 +13,13 @@ const PORT = 9917;
 app.use(cors());
 app.use(express.json());
 
-// Webhook routes
+// Initialize database connection
+db.connect().catch(console.error);
+
+// Routes
 app.use('/webhooks', webhookRoutes);
+app.use('/api/v1/repositories', repositoryRoutes);
+app.use('/api/v1/agents', agentRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -43,14 +51,6 @@ app.get('/api/v1/projects', (req, res) => {
   });
 });
 
-app.get('/api/v1/agents', (req, res) => {
-  res.json({
-    success: true,
-    data: {
-      agents: []
-    }
-  });
-});
 
 app.get('/api/v1/tasks', (req, res) => {
   const tasks = taskQueue.getAllTasks();
@@ -77,6 +77,21 @@ app.get('/api/v1/tasks/stats', (req, res) => {
     success: true,
     data: taskQueue.getStats()
   });
+});
+
+app.post('/api/v1/tasks', async (req, res) => {
+  try {
+    const task = await taskQueue.addTask(req.body);
+    res.json({
+      success: true,
+      data: { task }
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to create task'
+    });
+  }
 });
 
 app.get('/api/v1/organizations/current/stats', (req, res) => {

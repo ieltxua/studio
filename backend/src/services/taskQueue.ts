@@ -1,4 +1,6 @@
 import { EventEmitter } from 'events';
+import { claudeCodeExecutor, ExecuteTaskRequest } from './claudeCodeExecutor';
+import { db } from './database';
 
 export interface Task {
   id: string;
@@ -90,28 +92,92 @@ class TaskQueue extends EventEmitter {
   }
 
   /**
-   * Execute a task (placeholder for AI agent integration)
+   * Execute a task using Claude Code
    */
   private async executeTask(task: Task): Promise<any> {
-    console.log(`Executing task ${task.id} of type ${task.type}`);
+    console.log(`🎯 Executing task ${task.id} of type ${task.type}`);
     
-    // Simulate task execution
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // TODO: Integrate with AI agents
-    switch (task.type) {
-      case 'code_generation':
-        return { code: '// Generated code placeholder' };
-      case 'bug_fix':
-        return { fix: '// Bug fix placeholder' };
-      case 'code_review':
-        return { review: 'Code looks good!' };
-      case 'documentation':
-        return { docs: '# Documentation placeholder' };
-      case 'testing':
-        return { tests: '// Test placeholder' };
-      default:
-        throw new Error(`Unknown task type: ${task.type}`);
+    // Check if this task has the required context for Claude Code execution
+    const payload = task.payload;
+    if (payload && payload.agent && payload.issue && payload.repository) {
+      try {
+        console.log(`🚀 Starting Claude Code execution for task ${task.id}`);
+        
+        // Prepare execution request
+        const executeRequest: ExecuteTaskRequest = {
+          taskId: payload.dbTaskId || task.id,
+          agentId: task.agentId || payload.agent.id,
+          repository: {
+            owner: payload.repository.owner,
+            name: payload.repository.name,
+            cloneUrl: payload.repository.clone_url || `https://github.com/${payload.repository.owner}/${payload.repository.name}.git`,
+            defaultBranch: payload.repository.default_branch || 'main'
+          },
+          issue: {
+            number: payload.issue.number,
+            title: payload.issue.title,
+            body: payload.issue.body || '',
+            labels: payload.issue.labels?.map((l: any) => l.name) || []
+          },
+          agent: payload.agent
+        };
+        
+        // Execute with Claude Code
+        const result = await claudeCodeExecutor.executeTask(executeRequest);
+        
+        console.log(`✅ Claude Code execution completed for task ${task.id}:`, result.summary);
+        
+        return result;
+        
+      } catch (error) {
+        console.error(`❌ Claude Code execution failed for task ${task.id}:`, error);
+        throw error;
+      }
+    } else {
+      // Fallback for tasks without Claude Code context
+      console.log(`⚠️  Task ${task.id} missing Claude Code context, using fallback execution`);
+      
+      // Simple simulation for backwards compatibility
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      switch (task.type) {
+        case 'code_generation':
+          return { 
+            success: true,
+            summary: 'Code generation completed (simulated)',
+            filesModified: [],
+            filesCreated: ['example.ts']
+          };
+        case 'bug_fix':
+          return { 
+            success: true,
+            summary: 'Bug fix completed (simulated)',
+            filesModified: ['src/buggyFile.ts'],
+            filesCreated: []
+          };
+        case 'code_review':
+          return { 
+            success: true,
+            summary: 'Code review completed (simulated)',
+            review: 'Code looks good!'
+          };
+        case 'documentation':
+          return { 
+            success: true,
+            summary: 'Documentation updated (simulated)',
+            filesModified: ['README.md'],
+            filesCreated: []
+          };
+        case 'testing':
+          return { 
+            success: true,
+            summary: 'Tests added (simulated)',
+            filesCreated: ['tests/example.test.ts'],
+            filesModified: []
+          };
+        default:
+          throw new Error(`Unknown task type: ${task.type}`);
+      }
     }
   }
 

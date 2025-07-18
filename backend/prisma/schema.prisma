@@ -36,9 +36,10 @@ model Organization {
   createdBy String?
   
   // Relations
-  users    OrganizationUser[]
-  projects Project[]
-  agents   Agent[]
+  users     OrganizationUser[]
+  projects  Project[]
+  agents    Agent[]
+  auditLogs AuditLog[]
   
   @@map("organizations")
 }
